@@ -1,13 +1,17 @@
 /**
  * State-based routing for AngularJS 1.x
- * @version v1.0.0-rc.1
+ * NOTICE: This monolithic bundle also bundles the @uirouter/core code.
+ *         This causes it to be incompatible with plugins that depend on @uirouter/core.
+ *         We recommend switching to the ui-router-core.js and ui-router-angularjs.js bundles instead.
+ *         For more information, see http://ui-router.github.io/blog/angular-ui-router-umd-bundles
+ * @version v1.0.3
  * @link https://ui-router.github.io
  * @license MIT License, http://www.opensource.org/licenses/MIT
  */
 (function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('angular')) :
     typeof define === 'function' && define.amd ? define(['exports', 'angular'], factory) :
-    (factory((global['angular-ui-router'] = global['angular-ui-router'] || {}),global.angular));
+    (factory((global['@uirouter/angularjs'] = global['@uirouter/angularjs'] || {}),global.angular));
 }(this, (function (exports,ng_from_import) { 'use strict';
 
 /**
@@ -642,10 +646,9 @@ function ancestors(first, second) {
 }
 /**
  * Return a copy of the object only containing the whitelisted properties.
-
- * @example
- * ```
  *
+ * #### Example:
+ * ```
  * var foo = { a: 1, b: 2, c: 3 };
  * var ab = pick(foo, ['a', 'b']); // { a: 1, b: 2 }
  * ```
@@ -653,11 +656,13 @@ function ancestors(first, second) {
  * @param propNames an Array of strings, which are the whitelisted property names
  */
 function pick(obj, propNames) {
-    var copy = {};
-    // propNames.forEach(prop => { if (obj.hasOwnProperty(prop)) copy[prop] = obj[prop] });
-    propNames.forEach(function (prop$$1) { if (isDefined(obj[prop$$1]))
-        copy[prop$$1] = obj[prop$$1]; });
-    return copy;
+    var objCopy = {};
+    for (var prop_1 in obj) {
+        if (propNames.indexOf(prop_1) !== -1) {
+            objCopy[prop_1] = obj[prop_1];
+        }
+    }
+    return objCopy;
 }
 /**
  * Return a copy of the object omitting the blacklisted properties.
@@ -3414,10 +3419,12 @@ var Transition = (function () {
             var matching = PathUtils.matching(pathA, pathB);
             return pathA.length === matching.filter(function (node) { return !reloadState || !node.state.includes[reloadState.name]; }).length;
         };
-        if (same(this.treeChanges('from'), this.treeChanges('to')))
-            return "SameAsCurrent";
-        if (pending && same(pending.treeChanges('to'), this.treeChanges('to')))
+        var newTC = this.treeChanges();
+        var pendTC = pending && pending.treeChanges();
+        if (pendTC && same(pendTC.to, newTC.to) && same(pendTC.exiting, newTC.exiting))
             return "SameAsPending";
+        if (newTC.exiting.length === 0 && newTC.entering.length === 0 && same(newTC.from, newTC.to))
+            return "SameAsCurrent";
     };
     /**
      * Runs the transition
@@ -4573,6 +4580,7 @@ var UrlMatcher = (function () {
                     checkParamErrors(p.id);
                     this._params.push(paramFactory.fromSearch(p.id, p.type, this.config.paramMap(p.cfg, true)));
                     last = placeholder.lastIndex;
+                    // check if ?&
                 }
             }
         }
@@ -6389,6 +6397,7 @@ var TransitionEventType = (function () {
     return TransitionEventType;
 }());
 
+/** @module hooks */ /** */
 /**
  * A [[TransitionHookFn]] that skips a transition if it should be ignored
  *
@@ -6415,6 +6424,7 @@ var registerIgnoredTransitionHook = function (transitionService) {
     return transitionService.onBefore({}, ignoredHook, { priority: -9999 });
 };
 
+/** @module hooks */ /** */
 /**
  * A [[TransitionHookFn]] that rejects the Transition if it is invalid
  *
@@ -7232,7 +7242,7 @@ var StateService = (function () {
  * [angular 1 promise api](https://docs.angularjs.org/api/ng/service/$q)
  *
  * UI-Router evolved from an angular 1 library to a framework agnostic library.
- * However, some of the `ui-router-core` code uses these ng1 style APIs to support ng1 style dependency injection.
+ * However, some of the `@uirouter/core` code uses these ng1 style APIs to support ng1 style dependency injection.
  *
  * This API provides native ES6 promise support wrapped as a $q-like API.
  * Internally, UI-Router uses this $q object to perform promise operations.
@@ -7288,7 +7298,7 @@ var ARGUMENT_NAMES = /([^\s,]+)/g;
  * [angular 1 dependency injector](https://docs.angularjs.org/api/auto/service/$injector)
  *
  * UI-Router evolved from an angular 1 library to a framework agnostic library.
- * However, some of the `ui-router-core` code uses these ng1 style APIs to support ng1 style dependency injection.
+ * However, some of the `@uirouter/core` code uses these ng1 style APIs to support ng1 style dependency injection.
  *
  * This object provides a naive implementation of a globally scoped dependency injection system.
  * It supports the following DI approaches:
@@ -7470,11 +7480,16 @@ var BaseLocationServices = (function () {
     return BaseLocationServices;
 }());
 
-var __extends = (undefined && undefined.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
+var __extends = (undefined && undefined.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
 /**
  * @internalapi
  * @module vanilla
@@ -7501,11 +7516,16 @@ var HashLocationService = (function (_super) {
     return HashLocationService;
 }(BaseLocationServices));
 
-var __extends$1 = (undefined && undefined.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
+var __extends$1 = (undefined && undefined.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
 /**
  * @internalapi
  * @module vanilla
@@ -7526,11 +7546,16 @@ var MemoryLocationService = (function (_super) {
     return MemoryLocationService;
 }(BaseLocationServices));
 
-var __extends$2 = (undefined && undefined.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
+var __extends$2 = (undefined && undefined.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
 /**
  * A `LocationServices` that gets/sets the current location using the browser's `location` and `history` apis
  *
@@ -7857,7 +7882,7 @@ var hasAnyKey = function (keys, obj) {
  * This is a [[StateBuilder.builder]] function for angular1 `views`.
  *
  * When the [[StateBuilder]] builds a [[StateObject]] object from a raw [[StateDeclaration]], this builder
- * handles the `views` property with logic specific to angular-ui-router (ng1).
+ * handles the `views` property with logic specific to @uirouter/angularjs (ng1).
  *
  * If no `views: {}` property exists on the [[StateDeclaration]], then it creates the `views` object
  * and applies the state-level configuration to a view named `$default`.
@@ -8021,7 +8046,9 @@ var TemplateFactory = (function () {
             return null;
         if (this._useHttp) {
             return this.$http.get(url, { cache: this.$templateCache, headers: { Accept: 'text/html' } })
-                .then(function (response) { return response.data; });
+                .then(function (response) {
+                return response.data;
+            });
         }
         return this.$templateRequest(url);
     };
@@ -8073,19 +8100,24 @@ var TemplateFactory = (function () {
         bindings = bindings || {};
         // Bind once prefix
         var prefix = ng.version.minor >= 3 ? "::" : "";
+        // Convert to kebob name. Add x- prefix if the string starts with `x-` or `data-`
+        var kebob = function (camelCase) {
+            var kebobed = kebobString(camelCase);
+            return /^(x|data)-/.exec(kebobed) ? "x-" + kebobed : kebobed;
+        };
         var attributeTpl = function (input) {
             var name = input.name, type = input.type;
-            var attrName = kebobString(name);
+            var attrName = kebob(name);
             // If the ui-view has an attribute which matches a binding on the routed component
             // then pass that attribute through to the routed component template.
             // Prefer ui-view wired mappings to resolve data, unless the resolve was explicitly bound using `bindings:`
             if (uiView.attr(attrName) && !bindings[name])
-                return "x-" + attrName + "='" + uiView.attr(attrName) + "'";
+                return attrName + "='" + uiView.attr(attrName) + "'";
             var resolveName = bindings[name] || name;
             // Pre-evaluate the expression for "@" bindings by enclosing in {{ }}
             // some-attr="{{ ::$resolve.someResolveName }}"
             if (type === '@')
-                return "x-" + attrName + "='{{" + prefix + "$resolve." + resolveName + "}}'";
+                return attrName + "='{{" + prefix + "$resolve." + resolveName + "}}'";
             // Wire "&" callbacks to resolves that return a callback function
             // Get the result of the resolve (should be a function) and annotate it to get its arguments.
             // some-attr="$resolve.someResolveResultName(foo, bar)"
@@ -8095,13 +8127,13 @@ var TemplateFactory = (function () {
                 var args = fn && services.$injector.annotate(fn) || [];
                 // account for array style injection, i.e., ['foo', function(foo) {}]
                 var arrayIdxStr = isArray(fn) ? "[" + (fn.length - 1) + "]" : '';
-                return "x-" + attrName + "='$resolve." + resolveName + arrayIdxStr + "(" + args.join(",") + ")'";
+                return attrName + "='$resolve." + resolveName + arrayIdxStr + "(" + args.join(",") + ")'";
             }
             // some-attr="::$resolve.someResolveName"
-            return "x-" + attrName + "='" + prefix + "$resolve." + resolveName + "'";
+            return attrName + "='" + prefix + "$resolve." + resolveName + "'";
         };
         var attrs = getComponentBindings(component).map(attributeTpl).join(" ");
-        var kebobName = "x-" + kebobString(component);
+        var kebobName = kebob(component);
         return "<" + kebobName + " " + attrs + "></" + kebobName + ">";
     };
     
@@ -8270,7 +8302,7 @@ var StateProvider = (function () {
  * `onRetain` callback hooks on a [[Ng1StateDeclaration]].
  *
  * When the [[StateBuilder]] builds a [[StateObject]] object from a raw [[StateDeclaration]], this builder
- * ensures that those hooks are injectable for angular-ui-router (ng1).
+ * ensures that those hooks are injectable for @uirouter/angularjs (ng1).
  */
 var getStateHookBuilder = function (hookName) {
     return function stateHookBuilder(state, parentFn) {
@@ -8575,7 +8607,7 @@ var mod_util = ng.module('ui.router.util', ['ng', 'ui.router.init']);
 var mod_rtr = ng.module('ui.router.router', ['ui.router.util']);
 var mod_state = ng.module('ui.router.state', ['ui.router.router', 'ui.router.util', 'ui.router.angular1']);
 var mod_main = ng.module('ui.router', ['ui.router.init', 'ui.router.state', 'ui.router.angular1']);
-var mod_cmpt = ng.module('ui.router.compat', ['ui.router']);
+var mod_cmpt = ng.module('ui.router.compat', ['ui.router']); // tslint:disable-line
 var router = null;
 $uiRouter.$inject = ['$locationProvider'];
 /** This angular 1 provider instantiates a Router and exposes its services via the angular injector */
@@ -8622,8 +8654,8 @@ function runBlock($injector$$1, $q$$1, $uiRouter) {
         .forEach(function (resolvable) { return resolvable.deps = $injector$$1.annotate(resolvable.resolveFn); });
 }
 // $urlRouter service and $urlRouterProvider
-var getUrlRouterProvider = function (router) {
-    return router.urlRouterProvider = new UrlRouterProvider(router);
+var getUrlRouterProvider = function (uiRouter) {
+    return uiRouter.urlRouterProvider = new UrlRouterProvider(uiRouter);
 };
 // $state service and $stateProvider
 // $urlRouter service and $urlRouterProvider
